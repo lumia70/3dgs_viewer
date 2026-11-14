@@ -1,0 +1,10 @@
+node_modules/
+scene-catalog.json
+settings/
+*.zip
+Thumbs.db
+.DS_Store
+
+# These live beside this repo in the local workspace and are not source.
+data/
+playcanvas/

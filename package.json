@@ -1,0 +1,9 @@
+{
+    "name": "3dgs-viewer-demo",
+    "private": true,
+    "type": "module",
+    "scripts": {
+        "prepare": "node prepare-scenes.mjs",
+        "serve": "node serve-3dgs.mjs"
+    }
+}

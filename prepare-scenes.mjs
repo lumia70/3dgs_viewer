@@ -153,15 +153,95 @@ const prepareGlb = (sceneDir, scene) => {
         return null;
     }
 
+    // Group contiguous leaf ranges into chunked virtual GLB URLs. Loading a chunk and drawing
+    // each leaf's offset/count keeps GPU uploads range-limited without creating one asset per leaf.
+    const CHUNK_POINTS = 64 * 1024;
+    const sourceNames = manifest.filenames;
+    const filenames = [];
+    const fileIndex = new Map();
+
+    const rangeFile = (name, offset, count) => {
+        const key = `${name}|${offset}|${count}`;
+        const cached = fileIndex.get(key);
+        if (cached !== undefined) {
+            return cached;
+        }
+        const index = filenames.length;
+        filenames.push(`${name}?range=${offset},${count}`);
+        fileIndex.set(key, index);
+        return index;
+    };
+
+    const tree = JSON.parse(JSON.stringify(manifest.tree));
+    const groups = new Map();
+    const walk = (node) => {
+        if (node.lods) {
+            for (const level of Object.keys(node.lods)) {
+                const lod = node.lods[level];
+                const name = sourceNames[lod.file];
+                if (name && name.toLowerCase().endsWith('.glb')) {
+                    const key = `${lod.file}|${level}`;
+                    if (!groups.has(key)) {
+                        groups.set(key, []);
+                    }
+                    groups.get(key).push({
+                        lod,
+                        name,
+                        offset: lod.offset,
+                        count: lod.count
+                    });
+                }
+            }
+        }
+        (node.children ?? []).forEach(walk);
+    };
+    walk(tree);
+
+    const finalizeChunk = (chunk) => {
+        const index = rangeFile(chunk.name, chunk.start, chunk.end - chunk.start);
+        for (const entry of chunk.entries) {
+            entry.lod.file = index;
+            entry.lod.offset = entry.offset - chunk.start;
+            entry.lod.count = entry.count;
+        }
+    };
+
+    for (const entries of groups.values()) {
+        entries.sort((a, b) => a.offset - b.offset);
+        let chunk = null;
+        for (const entry of entries) {
+            const end = entry.offset + entry.count;
+            if (!chunk || Math.max(chunk.end, end) - chunk.start > CHUNK_POINTS) {
+                if (chunk) {
+                    finalizeChunk(chunk);
+                }
+                chunk = {
+                    name: entry.name,
+                    start: entry.offset,
+                    end,
+                    entries: []
+                };
+            } else {
+                chunk.end = Math.max(chunk.end, end);
+            }
+            chunk.entries.push(entry);
+        }
+        if (chunk) {
+            finalizeChunk(chunk);
+        }
+    }
+
     const output = {
         ...manifest,
+        filenames,
+        tree,
         upAxis: 'y'
     };
     delete output.previewLevel;
 
     mkdirSync(join(sceneDir, 'glb'), { recursive: true });
     writeFileSync(join(sceneDir, 'glb', 'lod-meta.json'), JSON.stringify(output, null, 2));
-    return { levels: manifest.lodLevels, files: manifest.filenames.length };
+    return { levels: manifest.lodLevels, files: filenames.length };
 };
 
 const report = [];

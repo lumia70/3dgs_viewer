@@ -86,8 +86,9 @@ const otherScenes = [
         name: 'SanYaPo UAV (outdoor, LOD, SOG)',
         formats: [{
             label: 'SOG',
-            content: '/data/lod/SanYaPo_UAV_diffuse_gsbox_lod_0611_edit/lod-meta.json',
-            settings: '/settings/sanya.json'
+            content: '/data/lod/SanYaPo_UAV_diffuse_gsbox_lod_0611_edit/lod-meta.json?format=sog',
+            settings: '/settings/sanya.json',
+            moveSpeed: 60
         }]
     }
 ];
@@ -102,6 +103,7 @@ const sceneUrl = (scene, format) => {
     const params = new URLSearchParams({ content: format.content });
     if (format.settings) params.set('settings', format.settings);
     if (format.collision) params.set('collision', format.collision);
+    if (format.moveSpeed) params.set('moveSpeed', String(format.moveSpeed));
     params.set('noanim', '');
     return `/viewer/?${params.toString()}`;
 };

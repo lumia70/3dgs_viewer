@@ -70,6 +70,7 @@ The server forwards the usual viewer query parameters. Useful demo flags:
 - `?perf` — log GLB decode/pack/build timings
 - `?legacy` — use the old main-thread GPU stream packing instead of `uwa-pack.worker.js`
 - `?budget=1` — cap the splat budget in millions
+- `?moveSpeed=60` — fly/walk speed in m/s; defaults to a scene-size-scaled value
 - `?debug` — viewer debug panel (on by default on the landing page)
 - `?webgl` — force the WebGL2 renderer
 

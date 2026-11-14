@@ -1,0 +1,29 @@
+diff --git a/3DGS_Render_glb_unpack/uwa_gsdecoder/gaussian_model/gs_decoder.cpp b/3DGS_Render_glb_unpack/uwa_gsdecoder/gaussian_model/gs_decoder.cpp
+--- a/3DGS_Render_glb_unpack/uwa_gsdecoder/gaussian_model/gs_decoder.cpp
++++ b/3DGS_Render_glb_unpack/uwa_gsdecoder/gaussian_model/gs_decoder.cpp
+@@ -399,7 +399,7 @@
+-    const bool decodeFeaturesRest = textureOutputMode == TextureOutputMode::CPU;
++    const bool cpuOutput = textureOutputMode == TextureOutputMode::CPU;
+@@ -414,13 +414,16 @@
+     g_timingStats.parseStreamMs = elapsedMs(parseStart);
+     descriptor_.textureOutputMode = textureOutputMode;
+-    descriptor_.decodeFeaturesRest = decodeFeaturesRest;
+ 
+     if (!validatePreparedMetadata()) {
+         releasePreparedDecode();
+         return false;
+     }
+ 
++    // SH0 payloads carry no features_rest stream; decoding it as CPU output would make the
++    // reconstruction kernel require a 45-channel attribute that is not present.
++    descriptor_.decodeFeaturesRest = cpuOutput && descriptor_.shDegree > 0;
++
+     const auto& metadata = *metadataUnit.unitPayload.gsbsMetadata;
+@@ -609,7 +612,7 @@
+                                  TextureOutputMode textureOutputMode) {
+     const auto totalStart = Clock::now();
+     if (!prepareFromMemory(buffer, bufferSize, textureOutputMode)) return false;
+-    const bool decodeFeaturesRest = textureOutputMode == TextureOutputMode::CPU;
++    const bool decodeFeaturesRest = descriptor_.decodeFeaturesRest;
+ 
+     gsData.clear();
